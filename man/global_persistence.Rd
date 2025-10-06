@@ -4,12 +4,14 @@
 \alias{global_persistence}
 \title{global persistence}
 \usage{
-global_persistence(vertex, edge_list, membership, H0 = TRUE)
+global_persistence(vertex, edge_list, weights, membership, H0 = TRUE)
 }
 \arguments{
 \item{vertex}{the vertices of the graph, whose label are integers and they must be consistent with the edge sets.}
 
 \item{edge_list}{the graph edge list in the form of an integer matrix with two columns.}
+
+\item{weights}{the graph edge weights.}
 
 \item{membership}{An integer vector representing the vertex membership:  x_i = k if i in C_k.}
 
@@ -33,14 +35,13 @@ library(persistence)
 library(igraph)
 
 edg = c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 5, 8, 5, 9, 6, 7, 6, 8, 7, 9, 8, 9)
-print(length(edg) / 2.0)
 vertex = unique(edg)
 edg = t(matrix(as.integer(edg), nrow = 2 ))
 rete <- graph_from_edgelist(edg, directed = FALSE) # I graph this matrix
 plot(rete)
 
 membership = c(1, 1, 1, 1, 2, 2, 2, 2, 2)
-v1 = global_persistence(vertex, edg, membership, H0=TRUE)
+v1 = global_persistence(vertex, edg, weights=NULL, membership, H0=TRUE)
 print(paste("global null-adjusted persistence: ", v1$value))
 print(paste("null-adjusted persistence per cluster: ", v1$clusters_value))
 }

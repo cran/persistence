@@ -1,11 +1,3 @@
-//
-//  utilita.cpp
-//  POSet
-//
-//  Created by Alessandro Avellone on 09/04/2019.
-//  Copyright © 2019 Alessandro Avellone. All rights reserved.
-//
-
 #include <fstream>
 #include <filesystem>
 #include <vector>
@@ -32,7 +24,7 @@ std::string FindAndReplaceAll(const std::string& data, const std::string toSearc
     // Get the first occurrence
     std::string risultato = data;
     size_t pos = risultato.find(toSearch);
-
+    
     // Repeat till end is reached
     while( pos != std::string::npos)
     {
@@ -63,7 +55,7 @@ std::string matrix_to_string(std::vector<std::vector<double>>& v, char DELIMETER
         }
         r += "\n";
     }
-
+    
     return r;
 }
 
@@ -78,20 +70,20 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
     if (!f.good()) {
         throw std::invalid_argument{"File not found: " + std::string(nomeFile)};
     }
-
+    
     std::string line;
     std::ifstream fp(nomeFile);
-
+    
     auto dati = std::make_shared<std::list<std::tuple<std::uint64_t, std::uint64_t, double>>>();
     auto nomi_vertici = std::make_shared<std::set<std::uint64_t>>();
-
+    
     int riga = 0;
     while (getline(fp, line)) {
         Trim(line);
         if (line.length() == 0) continue;
 
         auto tokens = split(line, dataSetColSpe);
-
+        
         for(std::uint64_t colonna = 0; colonna < tokens.size(); ++colonna) {
             std::string v = tokens.at(colonna);
             double peso = std::stod(v);
@@ -115,10 +107,10 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
     if (!f.good()) {
         throw std::invalid_argument{"File not found: " + std::string(nomeFile)};
     }
-
+    
     std::string line;
     std::ifstream fp(nomeFile);
-
+    
     auto dati = std::make_shared<std::list<std::tuple<std::uint64_t, std::uint64_t, double>>>();
     auto nomi_vertici = std::make_shared<std::map<std::string, std::uint64_t>>();
     std::uint64_t indice = 0;
@@ -152,7 +144,7 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
         }
     }
     fp.close();
-
+    
     return std::make_pair(dati, nomi_vertici);
 }
 
@@ -171,7 +163,7 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
     std::string file_str(file_size, '\0');
     fp.read(file_str.data(), file_size);
     fp.close();
-
+    
     std::uint64_t p = file_str.find('\n');
     std::string line = "";
     if (p == std::string::npos) {
@@ -184,7 +176,7 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
     if (elements_in_row != 2 && elements_in_row != 3) {
         throw std::invalid_argument{"File line size: " + std::to_string(elements_in_row)};
     }
-
+    
     auto dati = std::make_shared<std::list<std::tuple<std::uint64_t, std::uint64_t, double>>>();
     auto nomi_vertici = std::make_shared<std::map<std::string, std::uint64_t>>();
     std::uint64_t indice = 0;
@@ -207,7 +199,7 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
         if (tokens.size() != elements_in_row) {
             continue;
         }
-
+        
         auto v1 = tokens.at(0);
         std::uint64_t v1_index = 0;
         if (nomi_vertici->find(v1) == nomi_vertici->end()) {
@@ -229,9 +221,9 @@ std::pair<std::shared_ptr<std::list<std::tuple<std::uint64_t, std::uint64_t, dou
             peso = std::stod(tokens.at(2));
         }
         dati->push_back(std::make_tuple(v1_index, v2_index, peso));
-
+        
     }
-
+    
     return std::make_pair(dati, nomi_vertici);
 }
 
@@ -270,7 +262,7 @@ void Trim(std::string &s) {
 
 std::vector<std::string>& split(const std::string &text, char sep) {
     static std::vector<std::string> tokens;
-
+    
     tokens.clear();
     std::uint64_t start = 0, end = 0;
     while ((end = text.find(sep, start)) != std::string::npos) {

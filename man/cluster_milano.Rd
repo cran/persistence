@@ -4,12 +4,22 @@
 \alias{cluster_milano}
 \title{cluster Milano}
 \usage{
-cluster_milano(vertex, edge_list, seed = NULL)
+cluster_milano(
+  vertex,
+  edge_list,
+  weights = NULL,
+  membership = NULL,
+  seed = NULL
+)
 }
 \arguments{
 \item{vertex}{the vertices of the graph, whose label are integers and they must be consistent with the edge sets.}
 
 \item{edge_list}{the graph edge list in the form of an integer matrix with two columns.}
+
+\item{weights}{the graph edge weights.}
+
+\item{membership}{An integer vector representing the vertex start partition:  x_i = k if i in C_k.}
 
 \item{seed}{As some steps of the algorithm are random, users may experiments with different seeds of random numbers.}
 }
@@ -36,8 +46,6 @@ rete <- graph_from_edgelist(edg, directed = FALSE)
 plot(rete)
 seed <- sample(1:as.integer(.Machine$integer.max),1, replace= FALSE)
 r = cluster_milano(vertex, edg, seed=seed)
-print(paste("The optimal null-adjusted persistence is: ", r$measure))
-print(paste("The optimal persistence probability is: ", r$measure + 1))
 
 
 }

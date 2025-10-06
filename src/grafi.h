@@ -25,6 +25,7 @@ private:
     std::vector<std::uint_fast64_t> __degree;
     std::uint_fast64_t __total_degree;
     std::vector<double> __strength;
+    double __total_strength;
 public:
     UGraph(std::uint_fast64_t numero_vertici, std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>>& archi) {
         for (std::uint_fast64_t v = 0; v < numero_vertici; ++v) {
@@ -128,6 +129,10 @@ public:
     double Strength(std::uint_fast64_t v) const {
         return __strength.at(v);
     }
+    
+    double Strength() const {
+        return __total_strength;
+    }
 
     std::map<std::uint_fast64_t, double>& EdgesOf(std::uint_fast64_t v) {
         return __edge_set.at(v);
@@ -207,19 +212,22 @@ private:
         __total_degree = 0;
         for (auto& v1_iter : __edge_set) {
             auto v1 = v1_iter.first;
-            __degree.at(v1) += v1_iter.second.size();
-            __total_degree += __degree.at(v1);
+            auto degree_value = v1_iter.second.size();
+            __degree.at(v1) = degree_value;
+            __total_degree += degree_value;
         }
         return;
     }
 
     void BuildStrength() {
         __strength.assign(Size(), 0.0);
+        __total_strength = 0.0;
         for (auto& v1_iter : __edge_set) {
             auto v1 = v1_iter.first;
             for (auto& v2_iter : v1_iter.second) {
-              __strength.at(v1) += v2_iter.second;
-                //auto v2 = v2_iter.first;
+                __strength.at(v1) += v2_iter.second;
+                __total_strength += v2_iter.second;
+                // auto v2 = v2_iter.first;
                 //__strength.at(v2) += v2_iter.second;
             }
         }

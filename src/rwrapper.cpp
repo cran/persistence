@@ -30,23 +30,6 @@
 #include "louvainMethod.h"
 
 
-
-// ***********************************************
-// ***********************************************
-// ***********************************************
-
-SEXP getFromEnv(SEXP env, const std::string& name) {
-  SEXP nameSym = Rf_install(name.c_str());
-  SEXP res = Rf_findVarInFrame( env, nameSym ) ;
-
-  if(res == R_UnboundValue) return R_NilValue ;
-
-  if( TYPEOF(res) == PROMSXP){
-    res = Rf_eval(res, env);
-  }
-  return res ;
-}
-
 // ***********************************************
 // ***********************************************
 // ***********************************************
@@ -93,6 +76,7 @@ void chanFinalizer(SEXP ptr) {
 //************************************
 
 void LoadEdgeListR(SEXP edge_list_r,
+                   SEXP weights_r,
                    std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>>& edge_list,
                    std::map<std::string, std::uint_fast64_t>& vertici_to_position) {
     auto edge_list_dim_r = Rf_getAttrib(edge_list_r, R_DimSymbol);
@@ -104,18 +88,17 @@ void LoadEdgeListR(SEXP edge_list_r,
         throw_line(err_str);
     }
     std::list<std::tuple<std::string, std::string, double>> dati;
-    {
-      for (long k = 0; k < edge_list_nrow; ++k) {
+
+    for (long k = 0; k < edge_list_nrow; ++k) {
         std::string v1 = R_CHAR(STRING_ELT(edge_list_r, k + edge_list_nrow * 0));
         std::string v2 = R_CHAR(STRING_ELT(edge_list_r, k + edge_list_nrow * 1));
-        edge_list.push_back({vertici_to_position[v1], vertici_to_position[v2], 1.0});
-      }
+        double peso = REAL(weights_r)[k];
+        edge_list.push_back({vertici_to_position[v1], vertici_to_position[v2], peso});
     }
-
 }
 
 extern "C" {
-    SEXP globalPersistence(SEXP vertex_r, SEXP edge_list_r, SEXP membership_r, SEXP h0_r) {
+    SEXP globalPersistence(SEXP vertex_r, SEXP edge_list_r, SEXP weights_r, SEXP membership_r, SEXP h0_r) {
         int conta_protect = 0;
         SEXP result_r = R_NilValue;
         try {
@@ -128,38 +111,35 @@ extern "C" {
                 vertici_to_position[e] = (std::uint_fast64_t) k;
             }
             std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>> edge_list;
-            LoadEdgeListR(edge_list_r, edge_list, vertici_to_position);
+            LoadEdgeListR(edge_list_r, weights_r, edge_list, vertici_to_position);
 
             auto grafo = UGraph(position_to_vertici.size(), edge_list);
-            std::uint_fast64_t num_node = grafo.Size();
 
-            std::vector<std::uint_fast64_t> membership(num_node);
-            std::set<std::uint_fast64_t> membership_set;
+            std::vector<std::uint_fast64_t> membership(vertex_size);
             std::uint_fast64_t membership_size = Rf_length(membership_r);
             std::set<std::uint_fast64_t> used;
 
             for (std::uint_fast64_t p = 0; p < membership_size; ++p) {
                 std::uint_fast64_t value = (std::uint_fast64_t) INTEGER(membership_r)[p];
                 membership.at(p) = value;
-                membership_set.insert(value);
             }
 
             bool h0 = LOGICAL(h0_r)[0];
             std::shared_ptr<CommunityMeasure> measure = nullptr;
+            std::fstream result_file;
             if (h0) {
-                measure = std::make_shared<PersistenceModularityMeasure>(grafo);
+                measure = std::make_shared<PersistenceModularityMeasure>(grafo, result_file);
             } else {
                 measure = std::make_shared<PersistenceMeasure>(grafo);
             }
             auto cm = measure->globalValue(membership, nullptr);
             auto result_cm_r = Proteggi(Rf_allocVector(REALSXP, (int) cm.size()), conta_protect);
 
-
             double value = 0.0;
             for (std::uint_fast64_t colonna = 0; colonna < cm.size(); ++colonna) {
-              double s = cm.at(colonna).first + cm.at(colonna).second;
-              REAL(result_cm_r)[colonna] = s;
-              value += (std::isnan(s) ? 0.0: s);
+                double s = cm.at(colonna).first + cm.at(colonna).second;
+                REAL(result_cm_r)[colonna] = s;
+                value += (std::isnan(s) ? 0.0: s);
             }
 
             auto result_value_r = Proteggi(Rf_allocVector(REALSXP, 1), conta_protect);
@@ -172,6 +152,7 @@ extern "C" {
             SET_VECTOR_ELT(result_r, 1, result_cm_r);
             SET_VECTOR_ELT(result_r_names, 1, Rf_mkChar("clusters_value"));
             Rf_setAttrib(result_r, R_NamesSymbol, result_r_names);
+
         } catch(std::exception &ex) {
             forward_exception_to_r(ex.what());
         } catch(...) {
@@ -183,7 +164,7 @@ extern "C" {
 }
 
 extern "C" {
-    SEXP localPersistence(SEXP vertex_r, SEXP edge_list_r, SEXP cluster_r, SEXP h0_r) {
+    SEXP localPersistence(SEXP vertex_r, SEXP edge_list_r, SEXP weights_r, SEXP cluster_r, SEXP h0_r) {
         int conta_protect = 0;
         SEXP result_r = R_NilValue;
         try {
@@ -196,7 +177,7 @@ extern "C" {
               vertici_to_position[e] = (std::uint_fast64_t) k;
             }
             std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>> edge_list;
-            LoadEdgeListR(edge_list_r, edge_list, vertici_to_position);
+            LoadEdgeListR(edge_list_r, weights_r, edge_list, vertici_to_position);
 
             auto grafo = UGraph(position_to_vertici.size(), edge_list);
 
@@ -213,8 +194,9 @@ extern "C" {
 
             bool h0 = LOGICAL(h0_r)[0];
             std::shared_ptr<CommunityMeasure> measure = nullptr;
+            std::fstream result_file;
             if (h0) {
-                measure = std::make_shared<PersistenceModularityMeasure>(grafo);
+                measure = std::make_shared<PersistenceModularityMeasure>(grafo, result_file);
             } else {
                 measure = std::make_shared<PersistenceMeasure>(grafo);
             }
@@ -233,7 +215,7 @@ extern "C" {
 }
 
 extern "C" {
-  SEXP clusterMilano(SEXP vertex_r, SEXP edge_list_r, SEXP seed_r) {
+  SEXP clusterMilano(SEXP vertex_r, SEXP edge_list_r, SEXP weights_r, SEXP membership_r, SEXP seed_r) {
       int conta_protect = 0;
       SEXP result_r = R_NilValue;
       try {
@@ -246,7 +228,14 @@ extern "C" {
             vertici_to_position[e] = (std::uint_fast64_t) k;
           }
           std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>> edge_list;
-          LoadEdgeListR(edge_list_r, edge_list, vertici_to_position);
+          LoadEdgeListR(edge_list_r, weights_r, edge_list, vertici_to_position);
+
+          std::vector<std::uint_fast64_t> membership(vertex_size);
+
+          for (long p = 0; p < vertex_size; ++p) {
+              std::uint_fast64_t value = (std::uint_fast64_t) INTEGER(membership_r)[p];
+              membership.at(p) = value;
+          }
 
           long seed_r_length = Rf_length(seed_r);
           std::uint_fast64_t seed_rnd = 0;
@@ -259,44 +248,54 @@ extern "C" {
 
           auto rnd = std::make_shared<RandomUni>(seed_rnd);
 
-          std::vector<std::uint_fast64_t> old_to_new_vertex(vertici_to_position.size());
-          std::iota (std::begin(old_to_new_vertex), std::end(old_to_new_vertex), 0);
-          rnd->RndShuffle(old_to_new_vertex);
-          std::map<std::uint_fast64_t, std::uint_fast64_t> new_to_old_vertex;
-          for (std::uint_fast64_t k = 0; k < old_to_new_vertex.size(); ++k) {
-              new_to_old_vertex[old_to_new_vertex.at(k)] = k;
-          }
-          auto new_edges_list = RenameEdges(edge_list, old_to_new_vertex);
 
-          auto grafo = UGraph(position_to_vertici.size(), *new_edges_list);
-
-          std::uint_fast64_t num_node = grafo.Size();
+          auto grafo = UGraph(position_to_vertici.size(), edge_list);
 
           auto start_partition = std::make_shared<std::map<std::uint_fast64_t, std::shared_ptr<std::set<std::uint_fast64_t>>>>();
-          std::vector<std::uint_fast64_t> nodi(num_node);
-          std::iota(nodi.begin(), nodi.end(), 0);
-          std::transform(nodi.begin(), nodi.end(), std::inserter(*start_partition, start_partition->end()),
-                  [](const std::uint_fast64_t &s) { auto v = std::make_shared<std::set<std::uint_fast64_t>>(); v->insert(s); return std::make_pair(s, v); });
 
-          std::shared_ptr<CommunityMeasure> measure = std::make_shared<PersistenceModularityMeasure>(grafo);
+          for (std::uint_fast64_t k = 0; k < membership.size(); ++k) {
+              auto cluster_id = membership.at(k);
+              auto cluster_set = start_partition->insert({cluster_id, std::make_shared<std::set<std::uint_fast64_t>>()});
+              cluster_set.first->second->insert(k);
+          }
+
+          {
+              std::map<std::uint_fast64_t, std::uint_fast64_t> cluster_map;
+              for (std::uint_fast64_t k = 0; k < membership.size(); ++k) {
+                  auto membership_value = membership.at(k);
+                  auto find_iter = cluster_map.find(membership_value);
+                  std::uint_fast64_t cluster_id = cluster_map.size();
+                  if (find_iter == cluster_map.end()) {
+                      cluster_map.insert({membership_value, cluster_map.size()});
+                  } else {
+                      cluster_id = find_iter->second;
+                  }
+                  auto cluster_set = start_partition->insert({cluster_id, std::make_shared<std::set<std::uint_fast64_t>>()});
+                  cluster_set.first->second->insert(k);
+              }
+          }
+
+          std::fstream result_file;
+          auto measure = std::make_shared<PersistenceModularityMeasure>(grafo, result_file);
 
           std::shared_ptr<std::vector<double>> pi_value = nullptr;
 
           std::shared_ptr<std::map<std::uint_fast64_t, std::shared_ptr<std::set<std::uint_fast64_t>>>> partizione_best;
           std::pair<double, std::vector<double>> fo_best = std::make_pair(0.0, std::vector<double>());
+          std::fstream debug_file;
 
           louvainMethod(grafo,
                         *measure,
                         start_partition,
                         pi_value,
                         partizione_best,
-                        fo_best);
-
-          auto partizione_best_renamed = RenamePartition(*partizione_best, new_to_old_vertex);
+                        fo_best,
+                        debug_file);
 
           auto membership_r = Proteggi(Rf_allocVector(INTSXP, position_to_vertici.size()), conta_protect);
           int p = 1;
-          for (auto& c: *partizione_best_renamed) {
+
+          for (auto& c: *partizione_best) {
               for (auto& v: *c.second){
                   INTEGER(membership_r)[v] = p;
               }
@@ -333,9 +332,9 @@ extern "C" {
 
 extern "C" {
   static const R_CallMethodDef CallEntries[] = {
-      {"_cluster_milano", (DL_FUNC) &clusterMilano, 3},
-      {"_global_persistence", (DL_FUNC) &globalPersistence, 4},
-      {"_local_persistence", (DL_FUNC) &localPersistence, 4},
+      {"_cluster_milano", (DL_FUNC) &clusterMilano, 5},
+      {"_global_persistence", (DL_FUNC) &globalPersistence, 5},
+      {"_local_persistence", (DL_FUNC) &localPersistence, 5},
       {NULL, NULL, 0}
   };
 

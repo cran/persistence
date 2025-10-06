@@ -4,12 +4,14 @@
 \alias{local_persistence}
 \title{local_persistence}
 \usage{
-local_persistence(vertex, edge_list, cluster, H0 = TRUE)
+local_persistence(vertex, edge_list, weights, cluster, H0 = TRUE)
 }
 \arguments{
 \item{vertex}{the vertices of the graph, whose label are integers and they must be consistent with the edge sets}
 
 \item{edge_list}{the graph edge list in the form of an integer matrix with two columns}
+
+\item{weights}{the graph edge weights.}
 
 \item{cluster}{A binary vector representing the incidence vector of the cluster:  x_i = 1 if i in C, 0 otherwise.}
 
@@ -23,7 +25,7 @@ Given the incidence vector of a vertex subset, it calculates the persistence pro
 or the null-adjusted persistence of C.
 }
 \examples{
-#' library(persistence)
+library(persistence)
 library(igraph)
 
 edg = c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 5, 8, 5, 9, 6, 7, 6, 8, 7, 9, 8, 9)
@@ -36,7 +38,7 @@ plot(rete)
 cluster = rep(0, length(vertex))
 v1 = c(1, 2, 3, 4)
 cluster[v1] = 1
-f1 = local_persistence(vertex, edg, cluster, H0 = TRUE)
-f2 = local_persistence(vertex, edg, cluster, H0 = FALSE)
+f1 = local_persistence(vertex, edg, weights=NULL, cluster, H0 = TRUE)
+f2 = local_persistence(vertex, edg, weights=NULL, cluster, H0 = FALSE)
 
 }

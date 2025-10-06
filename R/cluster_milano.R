@@ -11,6 +11,12 @@
 #' @param edge_list
 #' the graph edge list in the form of an integer matrix with two columns.
 #'
+#' @param weights
+#' the graph edge weights.
+#'
+#' @param membership
+#' An integer vector representing the vertex start partition:  x_i = k if i in C_k.
+#'
 #' @param seed
 #' As some steps of the algorithm are random, users may experiments with different seeds of random numbers.
 #' @return
@@ -33,19 +39,18 @@
 #' plot(rete)
 #' seed <- sample(1:as.integer(.Machine$integer.max),1, replace= FALSE)
 #' r = cluster_milano(vertex, edg, seed=seed)
-#' print(paste("The optimal null-adjusted persistence is: ", r$measure))
-#' print(paste("The optimal persistence probability is: ", r$measure + 1))
 #'
 #'
 #' @name cluster_milano
 #' @export cluster_milano
-cluster_milano <- function(vertex, edge_list, seed=NULL) {
+cluster_milano <- function(vertex, edge_list, weights=NULL, membership=NULL, seed=NULL) {
   if (!is.vector(vertex)) {
     stop("vertex must be an array")
   }
   if (length(unique(vertex)) != length(vertex)) {
     stop("vertex contains duplicated values")
   }
+  vertex <- sort(vertex)
 
   if (!is.matrix(edge_list)) {
     stop("edge_list must be an edge list 1")
@@ -58,8 +63,38 @@ cluster_milano <- function(vertex, edge_list, seed=NULL) {
     stop("edge_list contains values not belonging to vertex")
   }
 
+  if (is.null(weights)) {
+    weights <- rep(1.0, nrow(edge_list))
+  }
+  if (!is.vector(weights)) {
+    stop("weights must be an array")
+  }
+
+  if (any(weights <= 0)) {
+    stop("weights must be positive")
+  }
+
+  if (length(weights) != nrow(edge_list)) {
+    stop("weights and edge_list must must agree")
+  }
+
   vertex <- as.character(vertex)
   edge_list <- matrix(as.character(edge_list), ncol = 2)
+  weights <- as.numeric(weights)
+
+  if (is.null(membership)) {
+    membership <- 1:(length(vertex))
+  }
+
+  if (length(membership) != length(vertex)) {
+    stop("membership and vertex must must agree on length")
+  }
+
+  if (min(membership) < 1 && max(membership) > length(vertex)) {
+    stop(paste("membership values and must be between 1 and ", length(vertex), sep=""))
+  }
+
+  membership <- as.integer(membership)
 
   if (!is.null(seed) && (seed < 0 || seed != round(seed))) {
     stop("seed must be a positive integer")
@@ -67,7 +102,7 @@ cluster_milano <- function(vertex, edge_list, seed=NULL) {
   seed <- as.integer(seed)
   result <- NULL
   tryCatch({
-    result <- .Call("_cluster_milano", vertex, edge_list, seed)
+    result <- .Call("_cluster_milano", vertex, edge_list, weights, membership, seed)
   }, warning = function(war) {
     # warning handler picks up where error was generated
     print(paste("MY_WARNING:  ",war))

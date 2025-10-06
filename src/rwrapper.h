@@ -27,7 +27,6 @@ inline SEXP Proteggi(SEXP s, int& conta) {
 // ***********************************************
 // ***********************************************
 
-SEXP getFromEnv(SEXP env, const std::string& name);
 SEXP getListElement(SEXP list, const char *str);
 
 // ***********************************************
@@ -35,9 +34,9 @@ SEXP getListElement(SEXP list, const char *str);
 // ***********************************************
 
 extern "C" {
-    SEXP clusterMilano(SEXP, SEXP, SEXP);
-    SEXP globalPersistence(SEXP, SEXP, SEXP, SEXP);
-    SEXP localPersistence(SEXP, SEXP, SEXP, SEXP);
+    SEXP clusterMilano(SEXP, SEXP, SEXP, SEXP, SEXP);
+    SEXP globalPersistence(SEXP, SEXP, SEXP, SEXP, SEXP);
+    SEXP localPersistence(SEXP, SEXP, SEXP, SEXP, SEXP);
 }
 
 // ***********************************************

@@ -20,7 +20,9 @@ RenameEdges(std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>
 
 std::shared_ptr<std::map<std::uint_fast64_t, std::shared_ptr<std::set<std::uint_fast64_t>>>>
 RenamePartition(std::map<std::uint_fast64_t, std::shared_ptr<std::set<std::uint_fast64_t>>>& old_partition,
-                std::map<std::uint_fast64_t, std::uint_fast64_t>& vertex_rename);
+                //std::map<std::uint_fast64_t, std::uint_fast64_t>& vertex_rename
+                std::vector<std::uint_fast64_t>& vertex_rename
+                );
 
 
 void louvainMethod(UGraph& matrice_adiacenza,
@@ -28,7 +30,8 @@ void louvainMethod(UGraph& matrice_adiacenza,
                    std::shared_ptr<std::map<std::uint_fast64_t, std::shared_ptr<std::set<std::uint_fast64_t>>>> start_clusters,
                    std::shared_ptr<std::vector<double>> pi_value,
                    std::shared_ptr<std::map<std::uint_fast64_t, std::shared_ptr<std::set<std::uint_fast64_t>>>>& final_clusters,
-                   std::pair<double, std::vector<double>>& fo_best);
+                   std::pair<double, std::vector<double>>& fo_best,
+                   std::fstream& debug_file);
 
 
 std::string communities_to_string(std::map<std::uint_fast64_t, std::set<std::uint_fast64_t>>& c, std::uint_fast64_t n);

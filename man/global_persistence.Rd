@@ -2,46 +2,61 @@
 % Please edit documentation in R/global_persistence.R
 \name{global_persistence}
 \alias{global_persistence}
-\title{global persistence}
+\alias{global_persistence.default}
+\alias{global_persistence.igraph}
+\title{global_persistence}
 \usage{
-global_persistence(vertex, edge_list, weights, membership, H0 = TRUE)
+global_persistence(x, ...)
+
+\method{global_persistence}{default}(x, edge_list, weights = NULL, membership, H0 = 0, ...)
+
+\method{global_persistence}{igraph}(x, membership, H0 = 0, ...)
 }
 \arguments{
-\item{vertex}{the vertices of the graph, whose label are integers and they must be consistent with the edge sets.}
+\item{x}{An integer or character vector representing the graph vertices,
+OR an object of class \code{igraph}.}
 
-\item{edge_list}{the graph edge list in the form of an integer matrix with two columns.}
+\item{...}{Additional arguments passed to specific methods (e.g., \code{edge_list},
+\code{weights}, \code{membership}, \code{H0}).}
 
-\item{weights}{the graph edge weights.}
+\item{edge_list}{Integer matrix with two columns representing the graph edge list.}
 
-\item{membership}{An integer vector representing the vertex membership:  x_i = k if i in C_k.}
+\item{weights}{Numeric vector of edge weights. If \code{NULL}, all weights default to 1.}
 
-\item{H0}{If true, it calculates the null-adjusted persistence, if false, the persistence probability.}
+\item{membership}{Integer vector of vertex cluster assignments: \code{x_i = k} if \code{i in C_k}.}
+
+\item{H0}{Optional numeric value in \eqn{[0, 1]}, or \code{NULL}. Default is \code{0}.}
 }
 \value{
-value
-A list containing the following:
+A list with two elements:
 \describe{
-\item{value}{The global persistence of the partition.}
-\item{clusters_value}{The local persistence of each cluster. If for some k we have v_k = NaN, then
-C_k is empty in the input membership.}
+\item{score}{The global persistence of the partition.}
+\item{clusters_value}{The local persistence of each cluster. A value of \code{NaN}
+indicates that cluster \eqn{C_k} is empty in the input \code{membership}.}
 }
 }
 \description{
-Given a partition of the graph vertices, it calculates the global persistence as the sum of the persistences
-of the single clusters. Persistence can be referred to the null-adjusted o to the probability.
+Given a partition of the graph vertices, calculates the global persistence
+as the sum of the local persistences of the individual clusters.
+Persistence can be either null-adjusted or probability-based.
+This function is polymorphic: it automatically detects the input type and accepts
+either a vertex vector (accompanied by an edge list) or directly an \code{igraph} object.
 }
 \examples{
 library(persistence)
-library(igraph)
 
-edg = c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 5, 8, 5, 9, 6, 7, 6, 8, 7, 9, 8, 9)
-vertex = unique(edg)
-edg = t(matrix(as.integer(edg), nrow = 2 ))
-rete <- graph_from_edgelist(edg, directed = FALSE) # I graph this matrix
-plot(rete)
+# --- EXAMPLE 1: Standard input (vectors and matrices) ---
+edg <- c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 6, 7)
+edge_list <- matrix(edg, ncol = 2, byrow = TRUE)
+vertex <- c(1, 2, 3, 4, 5, 6, 7)
+mem <- c(1, 1, 1, 1, 2, 2, 2)
+global_persistence(x = vertex, edge_list = edge_list, membership = mem)
 
-membership = c(1, 1, 1, 1, 2, 2, 2, 2, 2)
-v1 = global_persistence(vertex, edg, weights=NULL, membership, H0=TRUE)
-print(paste("global null-adjusted persistence: ", v1$value))
-print(paste("null-adjusted persistence per cluster: ", v1$clusters_value))
+# --- EXAMPLE 2: igraph input ---
+if (requireNamespace("igraph", quietly = TRUE)) {
+  g <- igraph::make_ring(10)
+  mem <- c(rep(1, 5), rep(2, 5))
+  global_persistence(g, membership = mem)
+}
+
 }

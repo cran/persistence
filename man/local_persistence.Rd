@@ -2,43 +2,57 @@
 % Please edit documentation in R/local_persistence.R
 \name{local_persistence}
 \alias{local_persistence}
+\alias{local_persistence.default}
+\alias{local_persistence.igraph}
 \title{local_persistence}
 \usage{
-local_persistence(vertex, edge_list, weights, cluster, H0 = TRUE)
+local_persistence(x, ...)
+
+\method{local_persistence}{default}(x, edge_list, weights = NULL, cluster, H0 = 0, ...)
+
+\method{local_persistence}{igraph}(x, cluster, H0 = 0, ...)
 }
 \arguments{
-\item{vertex}{the vertices of the graph, whose label are integers and they must be consistent with the edge sets}
+\item{x}{An integer or character vector representing the graph vertices,
+OR an object of class \code{igraph}.}
 
-\item{edge_list}{the graph edge list in the form of an integer matrix with two columns}
+\item{...}{Additional arguments passed to specific methods (e.g., \code{edge_list},
+\code{weights}, \code{cluster}, \code{H0}).}
 
-\item{weights}{the graph edge weights.}
+\item{edge_list}{Integer matrix with two columns representing the graph edge list.}
 
-\item{cluster}{A binary vector representing the incidence vector of the cluster:  x_i = 1 if i in C, 0 otherwise.}
+\item{weights}{Numeric vector of edge weights. If \code{NULL}, all weights default to 1.}
 
-\item{H0}{if true, it calculates the null-adjusted persistence, if false, the persistence probability.}
+\item{cluster}{Binary incidence vector of the cluster: \code{x_i = 1} if \code{i in C}, 0 otherwise.}
+
+\item{H0}{Optional numeric value in \eqn{[0, 1]}, or \code{NULL}. Default is \code{0}.}
 }
 \value{
-the value of the null-adjusted persistence if H0 = T, the value of the persistence probability if H0 = F
+Numeric scalar: the persistence probability when \code{H0 = NULL},
+the null-adjusted persistence when \code{H0 = 0},
+or the null-adjusted persistence density when \code{H0} is in \eqn{(0, 1]}.
 }
 \description{
-Given the incidence vector of a vertex subset, it calculates the persistence probability
-or the null-adjusted persistence of C.
+Given the incidence vector of a vertex subset, calculates either the
+persistence probability or the null-adjusted persistence of cluster C.
+This function is polymorphic: it automatically detects the input type and accepts
+either a vertex vector (accompanied by an edge list) or directly an \code{igraph} object.
 }
 \examples{
 library(persistence)
-library(igraph)
 
-edg = c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 5, 8, 5, 9, 6, 7, 6, 8, 7, 9, 8, 9)
-print(length(edg) / 2.0)
-vertex = unique(edg)
-edg = t(matrix(as.integer(edg), nrow = 2 ))
-rete <- graph_from_edgelist(edg, directed = FALSE) # I graph this matrix
-plot(rete)
+# --- EXAMPLE 1: Standard input (vectors and matrices) ---
+edg <- c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 6, 7)
+edge_list <- matrix(edg, ncol = 2, byrow = TRUE)
+vertex <- c(1, 2, 3, 4, 5, 6, 7)
+cluster_bin <- c(1, 1, 1, 1, 0, 0, 0)
+local_persistence(x = vertex, edge_list = edge_list, cluster = cluster_bin)
 
-cluster = rep(0, length(vertex))
-v1 = c(1, 2, 3, 4)
-cluster[v1] = 1
-f1 = local_persistence(vertex, edg, weights=NULL, cluster, H0 = TRUE)
-f2 = local_persistence(vertex, edg, weights=NULL, cluster, H0 = FALSE)
+# --- EXAMPLE 2: igraph input ---
+if (requireNamespace("igraph", quietly = TRUE)) {
+  g <- igraph::make_ring(10)
+  cluster_bin <- c(rep(1, 5), rep(0, 5))
+  local_persistence(g, cluster = cluster_bin)
+}
 
 }

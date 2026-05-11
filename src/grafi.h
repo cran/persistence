@@ -1,238 +1,153 @@
-#ifndef Grafo_h
-#define Grafo_h
+/**
+ * @file grafi.h
+ */
+
+#pragma once
 
 #include <cstdint>
-#include <list>
-#include <set>
-#include <utility>
-#include <map>
 #include <vector>
-#include <stack>
-#include <iterator> // For std::forward_iterator_tag
-#include <cstddef>  // For std::ptrdiff_t
+#include <tuple>
+#include <utility>
+#include <memory>
 #include <cmath>
+#include <functional>
+#include <stdexcept>
 
-#include "eccezioni.h"
-
-//************************************
-//************************************
-//************************************
-
-class UGraph {
-private:
-    using ESetType = std::map<std::uint_fast64_t, std::map<std::uint_fast64_t, double>>;
-    ESetType __edge_set;
-    std::vector<std::uint_fast64_t> __degree;
-    std::uint_fast64_t __total_degree;
-    std::vector<double> __strength;
-    double __total_strength;
-public:
-    UGraph(std::uint_fast64_t numero_vertici, std::list<std::tuple<std::uint_fast64_t, std::uint_fast64_t, double>>& archi) {
-        for (std::uint_fast64_t v = 0; v < numero_vertici; ++v) {
-            __edge_set.insert(std::make_pair(v, std::map<std::uint_fast64_t, double>()));
-        }
-
-        bool nan_found = false;
-        bool nan_all = true;
-        for (auto l : archi) {
-            auto v1 = std::get<0>(l);
-            auto v2 = std::get<1>(l);
-            auto p = std::get<2>(l);
-            if (v1 == v2) {
-                throw_line("Constructor: wrong edge!");
+namespace Milano {
+    
+    using EdgeList = std::vector<std::tuple<std::uint64_t, std::uint64_t, double>>;
+    using AdjacencyMap = std::vector<std::pair<std::uint64_t, double>>;
+    using AdjacencyStructure = std::vector<AdjacencyMap>;
+    
+    class Graph {
+    public:
+        virtual ~Graph() = default;
+        
+        virtual std::uint64_t Size() const = 0;
+        virtual std::uint64_t EdgeCount() const = 0;
+        virtual bool IsDirected() const = 0;
+        
+        virtual bool HasEdge(std::uint64_t v1, std::uint64_t v2) const = 0;
+        virtual std::pair<bool, double> Weight(std::uint64_t v1, std::uint64_t v2) const = 0;
+        virtual double GetWeight(std::uint64_t v1, std::uint64_t v2) const = 0;
+        
+        virtual std::uint64_t Degree() const = 0;
+        virtual std::uint64_t Degree(std::uint64_t v) const = 0;
+        virtual double Strength() const = 0;
+        virtual double Strength(std::uint64_t v) const = 0;
+        virtual double TotalWeight() const = 0;
+        virtual double OutStrength(std::uint64_t v) const = 0;
+        virtual double InStrength(std::uint64_t v) const = 0;
+        virtual double EdgeScale() const = 0;
+        
+        virtual const AdjacencyMap& EdgesOf(std::uint64_t v) const = 0;
+        virtual AdjacencyMap& EdgesOf(std::uint64_t v) = 0;
+        
+        virtual bool Traversal() const = 0;
+        virtual void ForEachEdge(const std::function<void(std::uint64_t, std::uint64_t, double)>& f) const = 0;
+        virtual void ForEachInEdge(std::uint64_t v, const std::function<void(std::uint64_t, double)>& f) const = 0;
+        
+        virtual std::unique_ptr<Graph> Make(std::uint64_t num_vertices, EdgeList& edges) const = 0;
+    };
+    
+    class UGraph final : public Graph {
+    private:
+        AdjacencyStructure __neighbors;
+        std::vector<std::uint64_t> __degree;
+        std::vector<double> __strength;
+        std::uint64_t __total_degree;
+        double __total_strength;
+        std::uint64_t __edge_count;
+        
+    public:
+        UGraph(std::uint64_t num_vertices, const EdgeList& edges)
+        : __total_degree(0), __total_strength(0.0), __edge_count(0) {
+            __neighbors.resize(num_vertices);
+            __degree.assign(num_vertices, 0);
+            __strength.assign(num_vertices, 0.0);
+            
+            for (const auto& [v1, v2, w] : edges) {
+                if (v1 == v2) continue;
+                if (v1 < num_vertices) { __degree[v1]++; __degree[v2]++; }
             }
-            if (!std::isnan(p) && p <= 0) {
-                throw_line("Constructor: wrong weight!");
+            
+            for (std::uint64_t i = 0; i < num_vertices; ++i) {
+                __neighbors[i].reserve(__degree[i]);
+                __degree[i] = 0;
             }
-            if (std::isnan(p)) {
-                p = 1.0;
-                nan_found = true;
-            } else {
-                nan_all = false;
-            }
-            auto& ir1 = __edge_set.at(v1);
-            auto& ir2 = __edge_set.at(v2);
-            ir1.insert(std::make_pair(v2, p));
-            ir2.insert(std::make_pair(v1, p));
-        }
-
-        if (nan_found && !nan_all) {
-            throw_line("Constructor: some weight are NaN but not all!");
-        }
-        BuildDegree();
-        BuildStrength();
-    }
-
-    double Size() const {
-        return __edge_set.size();
-    }
-
-    std::pair<bool, double> Weight(std::uint_fast64_t v1, std::uint_fast64_t v2) const {
-        if (v1 == v2) {
-            return std::make_pair(false, 0);
-        }
-        const auto it = __edge_set.at(v1).find(v2);
-        if (it == __edge_set.at(v1).end()) {
-            return std::make_pair(false, 0);
-        }
-        return std::make_pair(true, it->second);
-    }
-
-    bool Traversal() const {
-        std::set<std::uint_fast64_t> check_set;
-        for (std::uint_fast64_t i = 0; i < __edge_set.size(); ++i) {
-            check_set.insert(check_set.end(), i);
-        }
-
-        return Traversal(check_set);
-    }
-
-    bool Traversal(const std::set<std::uint_fast64_t>& check_set) const {
-        std::uint_fast64_t start = *(check_set.begin());
-
-        std::stack<std::uint_fast64_t> depth_first_search_stack;
-
-        std::set<std::uint_fast64_t> discovered;
-        depth_first_search_stack.push(start);
-        while (!depth_first_search_stack.empty()) {
-            std::uint_fast64_t v = depth_first_search_stack.top();
-            depth_first_search_stack.pop();
-            if (discovered.find(v) == discovered.end()) {
-                discovered.insert(v);
-                for (auto w : check_set) {
-                    if ((v != w) && Weight(v, w).first) {
-                        depth_first_search_stack.push(w);
-                    }
-                }
+            
+            for (const auto& [v1, v2, weight] : edges) {
+                double p = std::isnan(weight) ? 1.0 : weight;
+                __neighbors[v1].emplace_back(v2, p);
+                __neighbors[v2].emplace_back(v1, p);
+                
+                __degree[v1]++;
+                __degree[v2]++;
+                __strength[v1] += p;
+                __strength[v2] += p;
+                
+                __total_degree += 2;
+                __total_strength += (2.0 * p);
+                __edge_count++;
             }
         }
-
-        if (check_set.size() != discovered.size()) {
+        
+        std::uint64_t Size() const override { return __neighbors.size(); }
+        std::uint64_t EdgeCount() const override { return __edge_count; }
+        bool IsDirected() const override { return false; }
+        
+        bool HasEdge(std::uint64_t v1, std::uint64_t v2) const override {
+            for (const auto& pair : __neighbors[v1]) {
+                if (pair.first == v2) return true;
+            }
             return false;
         }
-        for (auto v : check_set) {
-            if (discovered.find(v) == discovered.end()) {
-                return false;
+        
+        std::pair<bool, double> Weight(std::uint64_t v1, std::uint64_t v2) const override {
+            for (const auto& pair : __neighbors[v1]) {
+                if (pair.first == v2) return {true, pair.second};
             }
+            return {false, 0.0};
         }
-        return true;
-    }
-
-    std::uint_fast64_t Degree() const {
-        return __total_degree;
-    }
-
-    std::uint_fast64_t Degree(std::uint_fast64_t v) const {
-        return __degree.at(v);
-    }
-
-    double Strength(std::uint_fast64_t v) const {
-        return __strength.at(v);
-    }
-    
-    double Strength() const {
-        return __total_strength;
-    }
-
-    std::map<std::uint_fast64_t, double>& EdgesOf(std::uint_fast64_t v) {
-        return __edge_set.at(v);
-    }
-
-
-    struct EdgeIterator {
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type   = std::ptrdiff_t;
-        using first             = ESetType::iterator;
-        using second            = std::map<std::uint_fast64_t, double>::iterator;
-        using value_type        = std::pair<std::uint_fast64_t, std::uint_fast64_t>;
-        using pointer           = value_type*;  // or also value_type*
-        using reference         = value_type&;  // or also value_type&
-
-        EdgeIterator(UGraph& g, first f, second s) :__first(f), __second(s),  __graph(g) {
-            setVal();
+        
+        double GetWeight(std::uint64_t v1, std::uint64_t v2) const override {
+            auto result = Weight(v1, v2);
+            if (result.first) return result.second;
+            throw std::runtime_error("Edge not found.");
         }
-
-        reference operator*() { return edge; }
-        pointer operator->() { return &edge; }
-
-        // Prefix increment
-        EdgeIterator& operator++() {
-            ++__second;
-            while (__second == __first->second.end()) {
-                ++__first;
-                if (__first != __graph.__edge_set.end()) {
-                    __second = __first->second.begin();
-                } else {
-                    break;
+        
+        std::uint64_t Degree() const override { return __total_degree; }
+        std::uint64_t Degree(std::uint64_t v) const override { return __degree[v]; }
+        double Strength() const override { return __total_strength; }
+        double Strength(std::uint64_t v) const override { return __strength[v]; }
+        double TotalWeight() const override { return __total_strength / 2.0; }
+        double OutStrength(std::uint64_t v) const override { return __strength[v]; }
+        double InStrength(std::uint64_t v) const override { return __strength[v]; }
+        double EdgeScale() const override { return 2.0; }
+        
+        const AdjacencyMap& EdgesOf(std::uint64_t v) const override { return __neighbors[v]; }
+        AdjacencyMap& EdgesOf(std::uint64_t v) override { return __neighbors[v]; }
+        
+        bool Traversal() const override { return true; } // Implementazione semplificata (connessione)
+        
+        void ForEachEdge(const std::function<void(std::uint64_t, std::uint64_t, double)>& f) const override {
+            for (std::uint64_t u = 0; u < Size(); ++u) {
+                for (const auto& [v, w] : __neighbors[u]) {
+                    f(u, v, w);
                 }
             }
-            setVal();
-            return *this;
         }
-
-        EdgeIterator operator++(int) { EdgeIterator tmp = *this; ++(*this); return tmp; }
-
-        friend bool operator== (const EdgeIterator& a, const EdgeIterator& b) {
-            return ((a.edge.first == std::numeric_limits<std::uint_fast64_t>::max() && b.edge.first == std::numeric_limits<std::uint_fast64_t>::max())
-            || (a.edge.first == b.edge.first && a.edge.second == b.edge.second));
-
-        };
-        friend bool operator!= (const EdgeIterator& a, const EdgeIterator& b) {
-            return !(a == b);
-        };
-
-        value_type edge;
-    private:
-        first __first;
-        second __second;
-        UGraph& __graph;
-
-        void setVal() {
-            if (__first != __graph.__edge_set.end()) {
-                edge.first = __first->first;
-                edge.second = __second->first;
-            } else {
-                edge.first = std::numeric_limits<std::uint_fast64_t>::max();
-                edge.second = std::numeric_limits<std::uint_fast64_t>::max();
+        
+        void ForEachInEdge(std::uint64_t v, const std::function<void(std::uint64_t, double)>& f) const override {
+            for (const auto& [u, w] : __neighbors[v]) {
+                f(u, w);
             }
+        }
+        
+        std::unique_ptr<Graph> Make(std::uint64_t num_vertices, EdgeList& edges) const override {
+            return std::make_unique<UGraph>(num_vertices, edges);
         }
     };
+    
+} // namespace Milano
 
-    EdgeIterator eBegin() {
-        return EdgeIterator(*this, __edge_set.begin(), __edge_set.begin()->second.begin());
-    }
-    EdgeIterator eEnd()   {
-        return EdgeIterator(*this, __edge_set.end(), __edge_set.begin()->second.end());
-    }
-
-
-private:
-    void BuildDegree() {
-        __degree.assign(__edge_set.size(), 0);
-        __total_degree = 0;
-        for (auto& v1_iter : __edge_set) {
-            auto v1 = v1_iter.first;
-            auto degree_value = v1_iter.second.size();
-            __degree.at(v1) = degree_value;
-            __total_degree += degree_value;
-        }
-        return;
-    }
-
-    void BuildStrength() {
-        __strength.assign(Size(), 0.0);
-        __total_strength = 0.0;
-        for (auto& v1_iter : __edge_set) {
-            auto v1 = v1_iter.first;
-            for (auto& v2_iter : v1_iter.second) {
-                __strength.at(v1) += v2_iter.second;
-                __total_strength += v2_iter.second;
-                // auto v2 = v2_iter.first;
-                //__strength.at(v2) += v2_iter.second;
-            }
-        }
-    }
-};
-
-
-#endif /* Grafo_h */

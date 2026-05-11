@@ -6,7 +6,8 @@
 \alias{persistence-package}
 \title{Persistence}
 \description{
-Given a non-oriented graph, calculates the optimal vertex partition using the persistence as the objective function.
+Given a non-oriented graph, calculates the optimal vertex partition using
+persistence as the objective function.
 }
 \details{
 See manual entries.
@@ -16,6 +17,7 @@ See manual entries.
 
 Authors:
 \itemize{
+  \item Alessandro Avellone \email{alessandro.avellone@unimib.it}
   \item Paolo Bartesaghi \email{paolo.bartesaghi@unimi.it}
   \item Stefano Benati \email{stefano.benati@unitn.it}
   \item Rosanna Grassi \email{rosanna.grassi@unimib.it}

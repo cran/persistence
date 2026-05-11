@@ -1,7 +1,7 @@
 Package: persistence
 Type: Package
 Title: Optimal Graph Partition using the Persistence
-Version: 0.2.0
+Version: 1.0.0
 Authors@R: c(
   person(
       "Alessandro", "Avellone",
@@ -30,15 +30,15 @@ License: GPL (>= 2)
 Encoding: UTF-8
 SystemRequirements: C++20
 Suggests: igraph
-RoxygenNote: 7.3.2
 NeedsCompilation: yes
 Collate: 'persistence-exports.R' 'cluster_milano.R'
         'global_persistence.R' 'local_persistence.R'
-Packaged: 2025-10-06 09:13:32 UTC; ale
+Config/roxygen2/version: 8.0.0
+Packaged: 2026-05-11 08:16:23 UTC; ale
 Author: Alessandro Avellone [aut, cre],
   Paolo Bartesaghi [aut],
   Stefano Benati [aut],
   Rosanna Grassi [aut]
 Maintainer: Alessandro Avellone <alessandro.avellone@unimib.it>
 Repository: CRAN
-Date/Publication: 2025-10-06 09:30:07 UTC
+Date/Publication: 2026-05-11 14:50:02 UTC

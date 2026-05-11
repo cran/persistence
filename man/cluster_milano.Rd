@@ -2,50 +2,87 @@
 % Please edit documentation in R/cluster_milano.R
 \name{cluster_milano}
 \alias{cluster_milano}
-\title{cluster Milano}
+\alias{cluster_milano.default}
+\alias{cluster_milano.igraph}
+\title{cluster_milano}
 \usage{
-cluster_milano(
-  vertex,
+cluster_milano(x, ...)
+
+\method{cluster_milano}{default}(
+  x,
   edge_list,
   weights = NULL,
   membership = NULL,
-  seed = NULL
+  H0 = TRUE,
+  seed = NULL,
+  tol = NULL,
+  max_level = 0L,
+  ...
+)
+
+\method{cluster_milano}{igraph}(
+  x,
+  membership = NULL,
+  H0 = TRUE,
+  seed = NULL,
+  tol = NULL,
+  max_level = 0L,
+  ...
 )
 }
 \arguments{
-\item{vertex}{the vertices of the graph, whose label are integers and they must be consistent with the edge sets.}
+\item{x}{An integer or character vector representing the graph vertices,
+OR an object of class \code{igraph}.}
 
-\item{edge_list}{the graph edge list in the form of an integer matrix with two columns.}
+\item{...}{Additional arguments passed to specific methods (e.g., \code{edge_list},
+\code{weights}, \code{tol}, \code{max_level}, etc.).}
 
-\item{weights}{the graph edge weights.}
+\item{edge_list}{Integer matrix with two columns representing the graph edge list.}
 
-\item{membership}{An integer vector representing the vertex start partition:  x_i = k if i in C_k.}
+\item{weights}{Numeric vector of positive edge weights. If \code{NULL}, all weights default to 1.}
 
-\item{seed}{As some steps of the algorithm are random, users may experiments with different seeds of random numbers.}
+\item{membership}{Integer vector representing the starting partition: \code{x_i = k} if \code{i in C_k}.
+If \code{NULL}, each vertex starts in its own cluster.}
+
+\item{H0}{Logical value. Default is \code{TRUE}.
+If \code{TRUE}, returns the null-adjusted persistence.
+If \code{FALSE}, returns the persistence probability.}
+
+\item{seed}{Non-negative integer seed for the random number generator.
+If \code{NULL}, an internal default is used.}
+
+\item{tol}{Optional numeric tolerance for the stopping criterion.
+If \code{NULL} (default), an adaptive threshold is calculated dynamically in C++.}
+
+\item{max_level}{Optional integer representing the maximum number of aggregation levels.
+If \code{0} (default) or \code{NULL}, the algorithm runs until convergence.}
 }
 \value{
-A list containing:
+A list with three elements:
 \describe{
-\item{membeship}{The optimal vertex partition.}
-\item{value}{The null-adjusted persistence of the partition.}
-\item{seed}{The used seed to generate random numbers.}
+\item{membership}{The optimal vertex partition.}
+\item{score}{The measure value of the optimal partition.}
+\item{seed}{The seed used to generate random numbers.}
 }
 }
 \description{
-Calculates the partition with maximum global null-adjuted persistence.
+Calculates the vertex partition with maximum global null-adjusted persistence.
+This function is polymorphic: it automatically detects the input type and accepts
+either a vertex vector (accompanied by an edge list) or directly an \code{igraph} object.
 }
 \examples{
 library(persistence)
-library(igraph)
 
-edg = c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 5, 8, 5, 9, 6, 7, 6, 8, 7, 9, 8, 9)
-print(length(edg) / 2.0)
-vertex = unique(edg)
-edg = t(matrix(as.integer(edg), nrow = 2 ))
-rete <- graph_from_edgelist(edg, directed = FALSE)
-plot(rete)
-seed <- sample(1:as.integer(.Machine$integer.max),1, replace= FALSE)
-r = cluster_milano(vertex, edg, seed=seed)
+# --- EXAMPLE 1: Standard input (vectors and matrices) ---
+edg <- c(1, 2, 1, 3, 1, 4, 2, 3, 3, 4, 4, 5, 5, 6, 5, 7, 6, 7)
+edge_list <- matrix(edg, ncol = 2, byrow = TRUE)
+vertex <- c(1, 2, 3, 4, 5, 6, 7)
+cluster_milano(x = vertex, edge_list = edge_list)
 
+# --- EXAMPLE 2: igraph input ---
+if (requireNamespace("igraph", quietly = TRUE)) {
+  g <- igraph::make_ring(10)
+  cluster_milano(g)
+}
 
 }

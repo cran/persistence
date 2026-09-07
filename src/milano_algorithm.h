@@ -384,7 +384,8 @@ namespace Milano {
             }
         };
         // Lancio dei thread
-        std::vector<std::jthread> threads;
+        std::vector<std::thread> threads;
+        //std::vector<std::jthread> threads;
         threads.reserve(n_threads);
         for (std::uint64_t t = 0; t < n_threads; ++t) {
             threads.emplace_back(worker);
@@ -393,7 +394,13 @@ namespace Milano {
         // std::jthread esegue il join automaticamente alla distruzione.
         // Chiamando .clear() blocchiamo l'esecuzione principale finché
         // tutti i thread non hanno completato il loro lavoro.
-        threads.clear();
+        //threads.clear(); 
+        // std::thread richiede il join esplicito prima della distruzione.
+        for (auto& t : threads) {
+            if (t.joinable()) t.join();
+        }
+        
+        
         
         return global_best_result;
     }
